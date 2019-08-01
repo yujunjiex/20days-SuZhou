@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+    <title>苏州高博AI实训项目--狗狗分类</title>
+    <link rel="stylesheet" href="../static/css/dogAI.css">
+    <link rel="stylesheet" href="../static/css/dogAI02.css">
+    <script type="text/javascript" src="../static/js/jquery-3.4.1.js" ></script>
+</head>
+
+<body id="index" class="split">
+    <header id="top-bar" class="top-bar white">
+        <div class="content-width">
+            <div id="logo" class="top-bar-logo"><a href="https://github.com/yujunjiex/20days-SuZhou">苏州高博AI实训项目--狗狗分类</a></div>
+        </div>
+    </header>
+    <div id="home-cover" data-content="follow-scroll-opacity">
+        <div id="home-cover-content" class="c20 fluid-column center-box padding-left-10 padding-right-10">
+            <h1>上传你的狗狗照片</h1>
+            <p class="description">可选择任意张图片,点击 开始上传 提交你的图片. 最大 16 MB 图片大小.<br>可识别的狗狗种类:哈士奇、藏獒、金毛、斗牛犬、泰迪、德牧等
+                <a href="./dogname/" target="_blank">133种狗.</a></p>
+            <div class="home-buttons">
+                <form id="imageForm" enctype='multipart/form-data'>
+                    <input id="images" name="images" type="file" class="hide"
+                           accept="image/jpg" value=""
+                           multiple="multiple" />
+                    <input id= "upload" class="hide" type="submit" value="上传"/>
+                    <a class="btn btn-big blue" onclick="fileClick()">开始上传</a>
+                </form>
+        	</div>
+        </div>
+        <script>
+            function fileClick(){
+                document.getElementById("images").click();
+            }
+
+            $('#images').change(function(){
+                $("div[id^='result']").remove();
+                $("#imageForm").find("a").html("重新上传");
+
+                for (let i=1; i<$('#images')[0].files.length+1; i++){
+                    let defaultUrl = "../static/images/default.jpg";
+                    let urlName = "default";
+
+                    let content = "<div id='result"+i+"'>"+"\n"+"<img class='left-image' src='"+defaultUrl+"' alt='"+urlName+"'>"+"\n"
+                    +"<p class='right-result'>" + "<b></b>" + "<br>" + "上传图片中"+ "</p>" + "\n" + "</div>";
+
+                    $('#home-cover').append(content);
+                }
+                let form_data = new FormData($('#imageForm')[0]);
+
+                $.ajax({
+                    url: '/upload/',
+                    type: 'post',
+                    data: form_data,
+                    contentType: false,
+                    processData: false,
+                    success: function(data){
+                        if (data.code === "200"){
+                            let i = 1;
+                            Object.keys(data['imageUrls']).forEach(function(key){
+                                 console.log(key, data['imageUrls'][key]);
+                                 $(eval("result" + i)).find("img").attr(
+                                 {
+                                     "src": ".."+data['imageUrls'][key],
+                                     "alt": ".."+key
+                                 });
+
+                                 let p = $(eval("result" + i)).find("p");
+                                 p.text("");
+                                 p.append("<b>识别中...</b><br>");
+
+                                 i ++;
+                            });
+                        // TODO:再次发送ajax请求进行图像识别
+                        this.identify = function(){
+                                 $.ajax({
+                           　　       url:'/identify/',
+                              　　    type : 'post',
+                              　　    dataType:'json',
+                                     headers: {
+                                        "Content-Type": "application/json;charset=utf-8"
+                                     },
+                                     contentType:'application/json; charset=utf-8',
+                                     data:JSON.stringify(data['imageUrls']),     // 把图片链接传回去
+
+　　                                  success:function(data){
+                                        if (data.status === "200"){
+                                            for (let i = 0; i < data["results"].length; i++) {
+                                                 let p = $(eval("result" + (i+1))).find("p");
+                                                 p.text("");
+                                                 {#p.append("<b>识别结果:</b><br>"+"这是一只"+data["results"][i]);#}
+                                                 p.append("<b>识别结果:</b><br>"+data["results"][i]);
+                                            }
+                                        }
+                                     }
+                                 });
+                            };
+                        setTimeout(this.identify, 1000);    //隔1s后进行另一个ajax请求(让ui有足够时间进行刷新)
+                        }
+
+                        else{
+                            console.log("error");
+                        }
+
+                    },
+                });
+
+            })
+        </script>
+    </div>
+</body>
+</html>
